@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 0.2.0)'
+        required: true
+        type: string
+      release_type:
+        description: 'Release type'
+        required: true
+        default: milestone
+        type: choice
+        options:
+          - milestone
+          - hotfix
+          - phase-completion
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract changelog
+        id: notes
+        run: |
+          V=${{ steps.ver.outputs.VERSION }}
+          NOTES=$(awk "/## \\[$V\\]/,/## \\[/" CHANGELOG.md | head -n -1 || echo 'See CHANGELOG.md')
+          echo "NOTES<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.VERSION }}
+          name: Luna Ice Mapper v${{ steps.ver.outputs.VERSION }}
+          body: |
+            ## Luna Ice Mapper v${{ steps.ver.outputs.VERSION }}
+            ${{ steps.notes.outputs.NOTES }}
+            ---
+            **Mission:** 6U CubeSat — Lunar South Polar Water-Ice Mapping
+            **Lead:** Indonesia | **Partner:** NASA CSLI
+            **Repo:** https://github.com/KOSASIH/luna-ice-mapper
+          generate_release_notes: true
+          draft: false

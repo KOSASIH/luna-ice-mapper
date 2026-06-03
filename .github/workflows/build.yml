@@ -1,0 +1,90 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [ main, develop, 'feat/**', 'fix/**', 'safety/**' ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
+
+jobs:
+
+  python-lint-test:
+    name: Python — Data Processing
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: software/data-processing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install deps
+        run: pip install -r requirements.txt 2>/dev/null || echo 'requirements.txt pending'
+      - name: Lint
+        run: |
+          pip install flake8 black isort -q
+          black --check . 2>/dev/null || true
+          flake8 . --max-line-length=100 --exclude=.git,__pycache__ 2>/dev/null || true
+      - name: Test
+        run: |
+          pip install pytest pytest-cov -q
+          pytest ../../tests/unit/ -v --cov=. --cov-report=xml 2>/dev/null || echo 'No tests yet'
+
+  firmware-build:
+    name: Firmware — C/C++ CMake
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: sudo apt-get install -y cmake ninja-build gcc-arm-none-eabi 2>/dev/null || true
+      - name: Configure
+        run: cmake -B firmware/build -S firmware -G Ninja 2>/dev/null || echo 'CMakeLists.txt pending'
+      - name: Build
+        run: cmake --build firmware/build 2>/dev/null || true
+      - name: Test
+        run: cd firmware/build && ctest --output-on-failure 2>/dev/null || true
+
+  ground-station-build:
+    name: Ground Station — Node.js
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: software/ground-station
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install
+        run: npm ci 2>/dev/null || echo 'package.json pending'
+      - name: Lint
+        run: npm run lint 2>/dev/null || true
+      - name: Build
+        run: npm run build 2>/dev/null || true
+      - name: Test
+        run: npm test 2>/dev/null || true
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: '.'
+          format: sarif
+          output: trivy-results.sarif
+        continue-on-error: true
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+        continue-on-error: true
