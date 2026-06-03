@@ -1,0 +1,441 @@
+# GUARDIAN Autonomous Response Playbooks
+# Luna Ice Mapper Mission — 6U CubeSat (LIM-1)
+# Version: 1.0.0 | Author: GUARDIAN Mission Control AI
+
+metadata:
+  mission: Luna Ice Mapper
+  spacecraft: LIM-1
+  version: 1.0.0
+  last_updated: "2026-06-03"
+  description: >
+    Autonomous response procedures for critical anomaly classes.
+    Each playbook defines triggers, immediate actions, and recovery steps.
+  priority_levels:
+    P1: CRITICAL  — immediate autonomous action, safe mode candidate
+    P2: HIGH      — degraded operations, ground notification required
+    P3: MEDIUM    — watch and log, schedule ground review
+    P4: LOW       — informational, trend monitoring
+
+# ================================================================
+# EPS ANOMALY RESPONSES
+# ================================================================
+eps_responses:
+
+  battery_critical_low:
+    id: EPS-001
+    name: Battery Critical Low Voltage
+    priority: P1
+    trigger:
+      parameter: eps.battery.voltage
+      condition: lt
+      threshold: 6.4
+    immediate_actions:
+      - sequence: 1
+        action: DISABLE_PAYLOAD
+        description: Power off neutron spectrometer and NIR camera
+      - sequence: 2
+        action: DISABLE_SBAND_TX
+        description: Disable S-band transmitter
+      - sequence: 3
+        action: REDUCE_ADCS_MODE
+        description: Switch ADCS to low-power magnetorquer-only mode
+      - sequence: 4
+        action: ENTER_SAFE_MODE
+        description: Transition spacecraft to SAFE mode
+      - sequence: 5
+        action: ORIENT_MAXIMUM_POWER
+        description: Command max-power-point tracking solar orientation
+      - sequence: 6
+        action: SEND_EMERGENCY_BEACON
+        description: Transmit emergency beacon on UHF every 30 s
+    recovery_conditions:
+      battery_voltage_min: 7.2
+      battery_soc_min: 35.0
+    recovery_actions:
+      - action: EXIT_SAFE_MODE
+        description: Return to NOMINAL after ground command + recovery confirmed
+    notifications:
+      ground_alert: true
+      sms_alert: true
+      log_level: CRITICAL
+
+  battery_warning_low:
+    id: EPS-002
+    name: Battery Warning Low Voltage
+    priority: P2
+    trigger:
+      parameter: eps.battery.voltage
+      condition: lt
+      threshold: 6.8
+    immediate_actions:
+      - sequence: 1
+        action: REDUCE_PAYLOAD_DUTY_CYCLE
+        description: Reduce payload observation duty cycle by 50%
+      - sequence: 2
+        action: DEFER_NON_ESSENTIAL_OPS
+        description: Postpone non-essential scheduled operations
+      - sequence: 3
+        action: NOTIFY_GROUND
+        description: Send power anomaly telemetry downlink
+    notifications:
+      ground_alert: true
+      log_level: WARNING
+
+  solar_panel_failure:
+    id: EPS-003
+    name: Solar Panel Power Loss
+    priority: P1
+    trigger:
+      parameter: eps.solar_panels.input_power
+      condition: lt
+      threshold: 0.5
+      duration_seconds: 300
+    immediate_actions:
+      - sequence: 1
+        action: CHECK_ECLIPSE_SCHEDULE
+        description: Verify against orbital eclipse prediction
+      - sequence: 2
+        action: DISABLE_NON_CRITICAL_LOADS
+        description: Shed all non-critical power loads
+      - sequence: 3
+        action: ENTER_ECLIPSE_PROTOCOL
+        description: Activate eclipse power management protocol
+    notifications:
+      ground_alert: true
+      log_level: CRITICAL
+
+  voltage_rail_fault:
+    id: EPS-004
+    name: Voltage Rail Out of Tolerance
+    priority: P2
+    trigger:
+      parameters: [eps.voltage_rails.rail_3v3, eps.voltage_rails.rail_5v, eps.voltage_rails.rail_12v]
+      condition: out_of_limits
+    immediate_actions:
+      - sequence: 1
+        action: CYCLE_EPS_RAIL
+        description: Attempt single power cycle of affected rail
+        max_retries: 2
+      - sequence: 2
+        action: ISOLATE_RAIL_LOADS
+        description: Disconnect non-essential loads on affected rail
+      - sequence: 3
+        action: LOG_EPS_DIAGNOSTICS
+        description: Capture full EPS diagnostic snapshot to flash
+    notifications:
+      ground_alert: true
+      log_level: WARNING
+
+# ================================================================
+# ADCS ANOMALY RESPONSES
+# ================================================================
+adcs_responses:
+
+  tumble_detected:
+    id: ADCS-001
+    name: Spacecraft Tumble Detected
+    priority: P1
+    trigger:
+      parameter: adcs.attitude_rates.total_angular_rate
+      condition: gt
+      threshold: 15.0
+    immediate_actions:
+      - sequence: 1
+        action: DISABLE_REACTION_WHEELS
+        description: Disable reaction wheels to prevent damage
+      - sequence: 2
+        action: ENABLE_BDOT_DETUMBLE
+        description: Activate B-dot magnetorquer detumble algorithm
+      - sequence: 3
+        action: DISABLE_PAYLOAD
+        description: Power off payload to conserve power during recovery
+      - sequence: 4
+        action: ENTER_DETUMBLE_STATE
+        description: Transition state machine to DETUMBLE mode
+      - sequence: 5
+        action: MONITOR_RATE_CONVERGENCE
+        description: Log attitude rates every 30 s until convergence
+    recovery_conditions:
+      angular_rate_max: 2.0
+      convergence_duration_seconds: 120
+    recovery_actions:
+      - action: RESTORE_NOMINAL_ADCS
+        description: Re-enable full ADCS, transition to NOMINAL
+    notifications:
+      ground_alert: true
+      sms_alert: true
+      log_level: CRITICAL
+
+  high_attitude_rate:
+    id: ADCS-002
+    name: High Attitude Rate Warning
+    priority: P2
+    trigger:
+      parameter: adcs.attitude_rates.total_angular_rate
+      condition: gt
+      threshold: 8.0
+    immediate_actions:
+      - sequence: 1
+        action: INCREASE_ADCS_CONTROL_GAIN
+        description: Increase reaction wheel control bandwidth
+      - sequence: 2
+        action: LOG_ATTITUDE_HISTORY
+        description: Capture 5-minute attitude history to flash
+    notifications:
+      ground_alert: true
+      log_level: WARNING
+
+  pointing_error_critical:
+    id: ADCS-003
+    name: Pointing Error Exceeds Science Limit
+    priority: P2
+    trigger:
+      parameter: adcs.attitude_error.pointing_error
+      condition: gt
+      threshold: 5.0
+    immediate_actions:
+      - sequence: 1
+        action: SUSPEND_SCIENCE_OPS
+        description: Halt ongoing science observations
+      - sequence: 2
+        action: REINITIALISE_ATTITUDE_ESTIMATE
+        description: Force star tracker re-acquisition
+      - sequence: 3
+        action: REPLAN_MANEUVER_SEQUENCE
+        description: Recompute attitude maneuver plan
+    notifications:
+      ground_alert: true
+      log_level: WARNING
+
+  repeated_adcs_faults:
+    id: ADCS-004
+    name: Repeated ADCS Faults
+    priority: P1
+    trigger:
+      parameter: adcs.error_counters.consecutive_errors
+      condition: gte
+      threshold: 5
+    immediate_actions:
+      - sequence: 1
+        action: RESET_ADCS_CONTROLLER
+        description: Perform controlled ADCS software reset
+      - sequence: 2
+        action: SWITCH_TO_BACKUP_ADCS
+        description: Failover to redundant ADCS processor
+      - sequence: 3
+        action: ENTER_SAFE_MODE
+        description: Enter SAFE mode if reset and failover both fail
+    notifications:
+      ground_alert: true
+      log_level: CRITICAL
+
+# ================================================================
+# COMMS ANOMALY RESPONSES
+# ================================================================
+comms_responses:
+
+  comms_loss_extended:
+    id: COMMS-001
+    name: Extended Communications Loss
+    priority: P1
+    trigger:
+      parameter: comms.link_timers.comms_loss_timer
+      condition: gt
+      threshold: 72.0
+    immediate_actions:
+      - sequence: 1
+        action: ENTER_SAFE_MODE
+        description: Transition to autonomous SAFE mode
+      - sequence: 2
+        action: ENABLE_LOW_RATE_BEACON
+        description: Enable 9600 baud emergency beacon on UHF
+      - sequence: 3
+        action: SELECT_OMNI_ANTENNA
+        description: Switch to omnidirectional UHF antenna
+      - sequence: 4
+        action: SET_BEACON_CADENCE_30S
+        description: Beacon every 30 seconds
+      - sequence: 5
+        action: FLUSH_SCIENCE_TO_REDUNDANT_FLASH
+        description: Preserve all science data to redundant storage
+      - sequence: 6
+        action: ORIENT_FOR_NEXT_GROUNDPASS
+        description: Maneuver to predicted ground-station pass geometry
+    recovery_conditions:
+      successful_contacts: 3
+    notifications:
+      ground_alert: true
+      sms_alert: true
+      log_level: CRITICAL
+
+  comms_loss_warning:
+    id: COMMS-002
+    name: Communications Loss Warning
+    priority: P2
+    trigger:
+      parameter: comms.link_timers.comms_loss_timer
+      condition: gt
+      threshold: 24.0
+    immediate_actions:
+      - sequence: 1
+        action: RETRY_LINK_ACQUISITION
+        description: Attempt UHF acquisition on all pre-programmed frequencies
+      - sequence: 2
+        action: VERIFY_ANTENNA_DEPLOYMENT
+        description: Confirm UHF antenna deployment status
+      - sequence: 3
+        action: BOOST_TX_POWER
+        description: Increase UHF transmitter to maximum power
+    notifications:
+      ground_alert: true
+      log_level: WARNING
+
+  high_bit_error_rate:
+    id: COMMS-003
+    name: High Bit Error Rate
+    priority: P3
+    trigger:
+      parameter: comms.uhf_transceiver.bit_error_rate
+      condition: gt
+      threshold: 1.0e-4
+    immediate_actions:
+      - sequence: 1
+        action: FALLBACK_TO_BPSK
+        description: Switch to BPSK modulation for robustness
+      - sequence: 2
+        action: REDUCE_DATA_RATE_50PCT
+        description: Lower UHF data rate by 50%
+      - sequence: 3
+        action: ENABLE_REED_SOLOMON_FEC
+        description: Enable Reed-Solomon FEC if not active
+    notifications:
+      ground_alert: false
+      log_level: WARNING
+
+# ================================================================
+# THERMAL ANOMALY RESPONSES
+# ================================================================
+thermal_responses:
+
+  battery_thermal_critical:
+    id: THERM-001
+    name: Battery Temperature Critical
+    priority: P1
+    trigger:
+      parameter: eps.battery.temperature
+      condition: out_of_limits
+      critical_low:  -20.0
+      critical_high:  55.0
+    immediate_actions:
+      - sequence: 1
+        action: ACTIVATE_BATTERY_HEATER
+        description: Enable battery heater at max duty (cold case)
+        condition: temp_lt_critical_low
+      - sequence: 1
+        action: REDUCE_BATTERY_DISCHARGE_CURRENT
+        description: Shed high-current loads (hot case)
+        condition: temp_gt_critical_high
+      - sequence: 2
+        action: DISABLE_HIGH_POWER_LOADS
+        description: Shed all non-essential high-current payloads
+      - sequence: 3
+        action: ENTER_SAFE_MODE
+        description: Transition to SAFE mode for thermal recovery
+    notifications:
+      ground_alert: true
+      sms_alert: true
+      log_level: CRITICAL
+
+  obc_thermal_warning:
+    id: THERM-002
+    name: OBC Temperature Warning
+    priority: P2
+    trigger:
+      parameter: thermal.obc.cpu_temperature
+      condition: out_of_limits
+      warning_low:  -10.0
+      warning_high:  70.0
+    immediate_actions:
+      - sequence: 1
+        action: REDUCE_CPU_UTILISATION
+        description: Defer non-critical processing tasks
+      - sequence: 2
+        action: ADJUST_ATTITUDE_FOR_THERMAL_BALANCE
+        description: Orient spacecraft to improve OBC thermal balance
+    notifications:
+      ground_alert: true
+      log_level: WARNING
+
+  payload_thermal_warning:
+    id: THERM-003
+    name: Payload Thermal Warning
+    priority: P2
+    trigger:
+      parameter: thermal.payload.neutron_spectrometer
+      condition: out_of_limits
+      warning_low:  -30.0
+      warning_high:  50.0
+    immediate_actions:
+      - sequence: 1
+        action: PAUSE_SCIENCE_OBSERVATIONS
+        description: Temporarily halt science data collection
+      - sequence: 2
+        action: ENABLE_PAYLOAD_HEATER
+        description: Activate payload heater (cold case only)
+        condition: temp_lt_warning_low
+      - sequence: 3
+        action: INCREASE_THERMAL_TELEMETRY_RATE
+        description: Raise thermal telemetry cadence to 1 Hz
+    notifications:
+      ground_alert: true
+      log_level: WARNING
+
+# ================================================================
+# SAFE MODE — CONSOLIDATED ENTRY/EXIT POLICY
+# ================================================================
+safe_mode:
+  entry_conditions:
+    - id: SM-001
+      trigger: "Battery voltage < 6.4 V"
+      source: EPS-001
+    - id: SM-002
+      trigger: "Total angular rate > 15 deg/s"
+      source: ADCS-001
+    - id: SM-003
+      trigger: "Comms loss > 72 hours"
+      source: COMMS-001
+    - id: SM-004
+      trigger: "OBC watchdog resets >= 5 per day"
+      source: OBC-001
+    - id: SM-005
+      trigger: "Battery temperature critical"
+      source: THERM-001
+
+  safe_mode_configuration:
+    eps:
+      - Enable battery heater if temp < -5 degC
+      - Disable all payload power rails
+      - Disable S-band transmitter
+      - Maintain UHF beacon only
+    adcs:
+      - Sun-pointing attitude
+      - Magnetorquer-only control
+      - Disable reaction wheels
+    comms:
+      - UHF beacon every 30 s
+      - Downlink housekeeping telemetry only
+    obc:
+      - Suspend all non-essential tasks
+      - Maintain command uplink capability
+      - Log all anomaly data to redundant flash
+
+  exit_conditions:
+    automatic:
+      battery_voltage_min:        7.2
+      battery_soc_min:           35.0
+      adcs_rate_max:              2.0
+      obc_errors_per_hour_max:    1
+      min_duration_seconds:    1800
+    manual:
+      requires_ground_command:  true
+      requires_system_checks:   true
