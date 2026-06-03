@@ -1,0 +1,341 @@
+# GUARDIAN Telemetry Limit Table
+# Luna Ice Mapper Mission — 6U CubeSat (LIM-1)
+# Version: 1.0.0 | Author: GUARDIAN Mission Control AI
+
+metadata:
+  mission: Luna Ice Mapper
+  spacecraft: LIM-1
+  version: 1.0.0
+  last_updated: "2026-06-03"
+  description: Telemetry thresholds for all spacecraft subsystems
+
+# ================================================================
+# ELECTRICAL POWER SUBSYSTEM (EPS)
+# ================================================================
+eps:
+  battery:
+    voltage:
+      unit: V
+      nominal: 7.4
+      thresholds:
+        warning_low:    6.8
+        critical_low:   6.4
+        warning_high:   8.4
+        critical_high:  8.6
+    state_of_charge:
+      unit: "%"
+      thresholds:
+        warning_low:    25.0
+        critical_low:   15.0
+    current:
+      unit: A
+      thresholds:
+        warning_high:   3.5
+        critical_high:  4.0
+    temperature:
+      unit: degC
+      thresholds:
+        warning_low:   -10.0
+        critical_low:  -20.0
+        warning_high:   45.0
+        critical_high:  55.0
+
+  voltage_rails:
+    rail_3v3:
+      unit: V
+      nominal: 3.3
+      thresholds:
+        warning_low:   3.1
+        critical_low:  2.9
+        warning_high:  3.5
+        critical_high: 3.7
+    rail_5v:
+      unit: V
+      nominal: 5.0
+      thresholds:
+        warning_low:   4.7
+        critical_low:  4.5
+        warning_high:  5.3
+        critical_high: 5.5
+    rail_12v:
+      unit: V
+      nominal: 12.0
+      thresholds:
+        warning_low:   11.4
+        critical_low:  10.8
+        warning_high:  12.6
+        critical_high: 13.2
+
+  solar_panels:
+    input_power:
+      unit: W
+      thresholds:
+        warning_low:  0.5
+        critical_low: 0.0
+    panel_temperature:
+      unit: degC
+      thresholds:
+        warning_low:   -80.0
+        critical_low: -100.0
+        warning_high:   80.0
+        critical_high: 100.0
+
+  power_budget:
+    total_consumption:
+      unit: W
+      thresholds:
+        warning_high:  18.0
+        critical_high: 22.0
+
+# ================================================================
+# ATTITUDE DETERMINATION AND CONTROL SUBSYSTEM (ADCS)
+# ================================================================
+adcs:
+  attitude_rates:
+    roll_rate:
+      unit: deg/s
+      thresholds:
+        warning_high:  5.0
+        critical_high: 10.0
+    pitch_rate:
+      unit: deg/s
+      thresholds:
+        warning_high:  5.0
+        critical_high: 10.0
+    yaw_rate:
+      unit: deg/s
+      thresholds:
+        warning_high:  5.0
+        critical_high: 10.0
+    total_angular_rate:
+      unit: deg/s
+      thresholds:
+        warning_high:  8.0
+        critical_high: 15.0
+
+  attitude_error:
+    pointing_error:
+      unit: deg
+      thresholds:
+        warning_high:  2.0
+        critical_high: 5.0
+    quaternion_norm_error:
+      unit: dimensionless
+      thresholds:
+        warning_high:  0.01
+        critical_high: 0.05
+
+  magnetorquers:
+    current:
+      unit: A
+      thresholds:
+        warning_high:  0.4
+        critical_high: 0.5
+    temperature:
+      unit: degC
+      thresholds:
+        warning_high:  60.0
+        critical_high: 75.0
+
+  reaction_wheels:
+    speed:
+      unit: RPM
+      thresholds:
+        warning_high:  6000
+        critical_high: 7000
+    temperature:
+      unit: degC
+      thresholds:
+        warning_high:  70.0
+        critical_high: 85.0
+
+  star_tracker:
+    tracked_stars:
+      unit: count
+      thresholds:
+        warning_low:  3
+        critical_low: 2
+
+  imu:
+    gyro_bias:
+      unit: deg/s
+      thresholds:
+        warning_high:  0.1
+        critical_high: 0.2
+    accelerometer_bias:
+      unit: m/s^2
+      thresholds:
+        warning_high:  0.05
+        critical_high: 0.1
+
+  error_counters:
+    errors_per_hour:
+      unit: count/hr
+      thresholds:
+        warning_high:  3
+        critical_high: 10
+    consecutive_errors:
+      unit: count
+      thresholds:
+        warning_high:  2
+        critical_high: 5
+
+# ================================================================
+# COMMUNICATIONS SUBSYSTEM (COMMS)
+# ================================================================
+comms:
+  uhf_transceiver:
+    rssi:
+      unit: dBm
+      thresholds:
+        warning_low:  -105.0
+        critical_low: -115.0
+    bit_error_rate:
+      unit: dimensionless
+      thresholds:
+        warning_high:  1.0e-4
+        critical_high: 1.0e-3
+    tx_power:
+      unit: dBm
+      nominal: 27.0
+      thresholds:
+        warning_low:   24.0
+        critical_low:  20.0
+        warning_high:  30.0
+        critical_high: 33.0
+    temperature:
+      unit: degC
+      thresholds:
+        warning_high:  65.0
+        critical_high: 80.0
+
+  sband_transmitter:
+    tx_power:
+      unit: W
+      nominal: 2.0
+      thresholds:
+        warning_low:   1.5
+        critical_low:  1.0
+        warning_high:  3.0
+        critical_high: 3.5
+    temperature:
+      unit: degC
+      thresholds:
+        warning_high:  70.0
+        critical_high: 85.0
+
+  link_timers:
+    comms_loss_timer:
+      unit: hours
+      description: Time since last successful ground contact
+      thresholds:
+        warning:  24.0
+        critical: 72.0
+    missed_contact_windows:
+      unit: count
+      thresholds:
+        warning_high:  2
+        critical_high: 5
+    telemetry_gap:
+      unit: seconds
+      thresholds:
+        warning_high:  300
+        critical_high: 900
+
+# ================================================================
+# THERMAL CONTROL SUBSYSTEM (TCS)
+# ================================================================
+thermal:
+  obc:
+    cpu_temperature:
+      unit: degC
+      thresholds:
+        warning_low:   -10.0
+        critical_low:  -20.0
+        warning_high:   70.0
+        critical_high:  85.0
+    board_temperature:
+      unit: degC
+      thresholds:
+        warning_low:   -15.0
+        critical_low:  -25.0
+        warning_high:   65.0
+        critical_high:  80.0
+
+  payload:
+    neutron_spectrometer:
+      unit: degC
+      thresholds:
+        warning_low:   -30.0
+        critical_low:  -40.0
+        warning_high:   50.0
+        critical_high:  60.0
+    nir_camera:
+      unit: degC
+      thresholds:
+        warning_low:   -20.0
+        critical_low:  -30.0
+        warning_high:   45.0
+        critical_high:  55.0
+    detector:
+      unit: degC
+      thresholds:
+        warning_high:  -10.0
+        critical_high:  0.0
+
+  structure:
+    panels:    # applied to all ±X ±Y ±Z faces
+      unit: degC
+      thresholds:
+        warning_low:   -60.0
+        critical_low:  -80.0
+        warning_high:   70.0
+        critical_high:  90.0
+
+  heaters:
+    battery_heater:
+      setpoint_on:  -5.0
+      setpoint_off:  5.0
+      unit: degC
+    payload_heater:
+      setpoint_on:  -25.0
+      setpoint_off: -15.0
+      unit: degC
+
+# ================================================================
+# ON-BOARD COMPUTER (OBC)
+# ================================================================
+obc:
+  memory:
+    ram_usage:
+      unit: "%"
+      thresholds:
+        warning_high:  80.0
+        critical_high: 95.0
+    flash_usage:
+      unit: "%"
+      thresholds:
+        warning_high:  75.0
+        critical_high: 90.0
+    sram_errors:
+      unit: count
+      thresholds:
+        warning_high:  5
+        critical_high: 20
+  cpu:
+    utilization:
+      unit: "%"
+      thresholds:
+        warning_high:  85.0
+        critical_high: 95.0
+  software:
+    watchdog_resets_per_day:
+      unit: count/day
+      thresholds:
+        warning_high:  2
+        critical_high: 5
+    errors_per_hour:
+      unit: count/hr
+      thresholds:
+        warning_high:  3
+        critical_high: 10
