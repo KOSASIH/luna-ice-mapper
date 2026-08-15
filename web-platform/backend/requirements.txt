@@ -15,7 +15,7 @@ rasterio==1.4.1
 gdal==3.9.2
 spiceypy==5.1.2
 astropy==6.1.5
-torch==2.4.1
+torch==2.13.0
 scikit-learn==1.5.2
 scipy==1.14.1
 pandas==2.2.3
