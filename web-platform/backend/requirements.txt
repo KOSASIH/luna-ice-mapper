@@ -12,7 +12,7 @@ python-multipart==0.0.10
 httpx==0.27.2
 numpy==2.1.1
 rasterio==1.4.1
-gdal==3.9.2
+gdal==3.13.1
 spiceypy==5.1.2
 astropy==6.1.5
 torch==2.4.1
